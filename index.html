@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Songbook</title>
+<meta name="description" content="Songbook mit Akkorden, Griffbildern für Gitarre und Ukulele, Transponieren, Setlisten und PDF. Läuft offline.">
+<meta name="theme-color" content="#f5f3ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14161b" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Songbook">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+<script>
+  // Thema sofort setzen, damit nichts aufblitzt
+  try { var t = localStorage.getItem('songbook-thema'); if (t === 'hell' || t === 'dunkel') document.documentElement.dataset.theme = t === 'hell' ? 'light' : 'dark'; } catch (e) {}
+</script>
+</head>
+<body>
+<header class="kopf" id="kopf">
+  <div class="marke">
+    <svg class="logo" viewBox="0 0 512 512" aria-hidden="true">
+      <rect width="512" height="512" rx="112" fill="#c4592a"/>
+      <path d="M256 168C220 144 170 136 120 142v210c50-6 100 2 136 26z" fill="#fff"/>
+      <path d="M256 168c36-24 86-32 136-26v210c-50-6-100 2-136 26z" fill="#fff" opacity=".9"/>
+      <g fill="#b14a20"><ellipse cx="300" cy="318" rx="25" ry="18" transform="rotate(-20 300 318)"/><rect x="316" y="196" width="11" height="122" rx="4"/><path d="M321 196c10 26 46 30 42 66-7-20-24-26-42-28z"/></g>
+    </svg>
+    <div>
+      <h1>Songbook</h1>
+      <p class="untertitel" id="untertitel">Songs, Akkorde und Setlisten</p>
+    </div>
+  </div>
+  <div class="kopf-knoepfe">
+    <button type="button" id="thema" class="icon-knopf" aria-label="Hell oder dunkel umschalten" title="Hell oder dunkel">
+      <svg class="sonne" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg>
+      <svg class="mond" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+    </button>
+    <button type="button" id="einstellungen-knopf" class="icon-knopf" aria-label="Einstellungen" title="Einstellungen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- ===================================================== Übersicht: Songs und Setlisten -->
+<main id="v-liste" class="ansicht seite" aria-label="Übersicht">
+  <div class="segment reiter" id="reiter" role="tablist" aria-label="Songs oder Setlisten">
+    <button type="button" role="tab" data-reiter="songs">Songs</button>
+    <button type="button" role="tab" data-reiter="setlisten">Setlisten</button>
+  </div>
+
+  <section id="t-songs" aria-label="Songs">
+    <div class="suche-zeile">
+      <label class="suche">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+        <input type="search" id="suche" placeholder="Titel, Interpret oder Textzeile" autocomplete="off" spellcheck="false" aria-label="Songs durchsuchen">
+      </label>
+      <button type="button" class="knopf" id="neuer-song">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Neuer Song
+      </button>
+    </div>
+    <nav class="buchstaben" id="buchstaben" aria-label="Zum Anfangsbuchstaben springen"></nav>
+    <p class="leise klein-text" id="treffer" aria-live="polite"></p>
+    <div class="liste karte" id="song-liste"></div>
+  </section>
+
+  <section id="t-setlisten" aria-label="Setlisten" hidden>
+    <div class="suche-zeile">
+      <p class="leise klein-text grow">Tippe auf eine Setliste, um sie zu öffnen, zu ändern oder als PDF zu teilen.</p>
+      <button type="button" class="knopf" id="neue-setliste">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Neue Setliste
+      </button>
+    </div>
+    <div class="liste karte" id="setlisten-liste"></div>
+  </section>
+</main>
+
+<!-- ===================================================== Song -->
+<main id="v-song" class="ansicht" aria-label="Song" hidden>
+  <div class="leiste" id="song-leiste">
+    <button type="button" class="zurueck" id="song-zurueck"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span id="song-zurueck-text">Songs</span></button>
+    <div class="leiste-knoepfe">
+      <button type="button" class="icon-knopf" id="song-bearbeiten" aria-label="Song bearbeiten" title="Bearbeiten">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM13.5 7.5l3 3"/></svg>
+      </button>
+      <button type="button" class="icon-knopf" id="song-teilen" aria-label="Als PDF teilen oder sichern" title="PDF teilen oder sichern">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.5V3.5M8 7.2l4-3.7 4 3.7M8.5 10H6.2C5.5 10 5 10.5 5 11.2v8.6c0 .7.5 1.2 1.2 1.2h11.6c.7 0 1.2-.5 1.2-1.2v-8.6c0-.7-.5-1.2-1.2-1.2h-2.3"/></svg>
+      </button>
+      <button type="button" class="icon-knopf" id="song-mehr" aria-label="Weitere Aktionen" title="Mehr" aria-haspopup="menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="menue karte" id="song-menue" role="menu" hidden>
+    <button type="button" role="menuitem" data-aktion="setliste">Zu einer Setliste hinzufügen</button>
+    <button type="button" role="menuitem" data-aktion="versionen">Versionen</button>
+    <button type="button" role="menuitem" data-aktion="transp-speichern">Transponiert als neue Version speichern</button>
+    <button type="button" role="menuitem" data-aktion="drucken">Drucken</button>
+    <button type="button" role="menuitem" data-aktion="loeschen" class="warm">Song löschen</button>
+  </div>
+
+  <div class="werkzeuge" id="werkzeuge">
+    <div class="wz" title="Transponieren in Halbtönen">
+      <span class="wz-name">Tonart</span>
+      <button type="button" class="icon-knopf klein" id="tr-minus" aria-label="Einen Halbton tiefer">−</button>
+      <button type="button" class="wz-wert" id="tr-wert" aria-label="Transponierung zurücksetzen">±0</button>
+      <button type="button" class="icon-knopf klein" id="tr-plus" aria-label="Einen Halbton höher">+</button>
+    </div>
+    <div class="segment klein" id="inst" role="radiogroup" aria-label="Griffbilder">
+      <button type="button" role="radio" data-inst="aus">Ohne Griffe</button>
+      <button type="button" role="radio" data-inst="gitarre">Gitarre</button>
+      <button type="button" role="radio" data-inst="ukulele">Ukulele</button>
+    </div>
+    <div class="wz">
+      <span class="wz-name">Schrift</span>
+      <button type="button" class="icon-knopf klein" id="schrift-minus" aria-label="Schrift kleiner">A<small>−</small></button>
+      <button type="button" class="icon-knopf klein" id="schrift-plus" aria-label="Schrift größer">A<small>+</small></button>
+    </div>
+    <div class="wz">
+      <button type="button" class="knopf zweit klein" id="scroll-start" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M6 14l6 6 6-6"/></svg><span>Scrollen</span>
+      </button>
+      <button type="button" class="icon-knopf klein" id="scroll-minus" aria-label="Langsamer scrollen">−</button>
+      <output class="wz-wert schmal" id="scroll-wert" aria-label="Scrolltempo">3</output>
+      <button type="button" class="icon-knopf klein" id="scroll-plus" aria-label="Schneller scrollen">+</button>
+    </div>
+  </div>
+
+  <article class="lied-seite" id="lied-seite">
+    <header class="lied-kopf">
+      <h2 id="lied-titel"></h2>
+      <p class="lied-unter" id="lied-unter"></p>
+      <p class="lied-info" id="lied-info"></p>
+    </header>
+    <div class="griffleiste" id="griffleiste" hidden></div>
+    <div class="lied" id="lied"></div>
+  </article>
+
+  <nav class="set-nav karte" id="set-nav" aria-label="Zum vorigen oder nächsten Song" hidden>
+    <button type="button" id="set-zurueck" class="set-schritt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span></span></button>
+    <span class="set-pos" id="set-pos"></span>
+    <button type="button" id="set-weiter" class="set-schritt rechts"><span></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+  </nav>
+</main>
+
+<!-- ===================================================== Setliste -->
+<main id="v-setliste" class="ansicht seite" aria-label="Setliste" hidden>
+  <div class="leiste">
+    <button type="button" class="zurueck" id="setliste-zurueck"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>Setlisten</span></button>
+    <div class="leiste-knoepfe">
+      <button type="button" class="icon-knopf" id="setliste-teilen" aria-label="Setliste als PDF teilen oder sichern" title="Als PDF teilen oder sichern">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.5V3.5M8 7.2l4-3.7 4 3.7M8.5 10H6.2C5.5 10 5 10.5 5 11.2v8.6c0 .7.5 1.2 1.2 1.2h11.6c.7 0 1.2-.5 1.2-1.2v-8.6c0-.7-.5-1.2-1.2-1.2h-2.3"/></svg>
+      </button>
+      <button type="button" class="icon-knopf" id="setliste-mehr" aria-label="Weitere Aktionen" title="Mehr" aria-haspopup="menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="menue karte" id="setliste-menue" role="menu" hidden>
+    <button type="button" role="menuitem" data-aktion="umbenennen">Umbenennen</button>
+    <button type="button" role="menuitem" data-aktion="kopieren">Kopie anlegen</button>
+    <button type="button" role="menuitem" data-aktion="zuruecksetzen">Auf den Stand aus dem Songbook zurücksetzen</button>
+    <button type="button" role="menuitem" data-aktion="loeschen" class="warm">Setliste löschen</button>
+  </div>
+  <header class="setliste-kopf">
+    <h2 id="setliste-name"></h2>
+    <p class="leise" id="setliste-info"></p>
+  </header>
+  <div class="suche-zeile">
+    <button type="button" class="knopf" id="setliste-start"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Ab dem ersten Song</button>
+    <button type="button" class="knopf zweit" id="setliste-aendern" aria-pressed="false">Ändern</button>
+  </div>
+  <div class="aendern-leiste" id="aendern-leiste" hidden>
+    <button type="button" class="knopf zweit klein" id="setliste-songs-dazu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Songs hinzufügen</button>
+    <button type="button" class="knopf zweit klein" id="setliste-trenner-dazu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Trenner (Pause, Zugaben)</button>
+  </div>
+  <ol class="liste karte setliste" id="setliste-eintraege"></ol>
+  <p class="leise klein-text" id="setliste-leer" hidden>Noch keine Songs. Tippe auf „Ändern“ und dann auf „Songs hinzufügen“.</p>
+</main>
+
+<!-- ===================================================== Editor -->
+<main id="v-editor" class="ansicht seite" aria-label="Song bearbeiten" hidden>
+  <div class="leiste">
+    <button type="button" class="zurueck" id="editor-abbrechen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>Abbrechen</span></button>
+    <div class="leiste-knoepfe">
+      <button type="button" class="knopf" id="editor-speichern">Als neue Version speichern</button>
+    </div>
+  </div>
+  <h2 class="editor-titel" id="editor-ueberschrift">Song bearbeiten</h2>
+  <div class="editor-felder">
+    <label class="feld"><span>Titel</span><input type="text" id="ed-titel" autocomplete="off" required></label>
+    <label class="feld"><span>Interpret</span><input type="text" id="ed-kuenstler" autocomplete="off"></label>
+  </div>
+  <div class="editor-werkzeuge">
+    <div class="ed-akkorde" id="ed-akkorde" aria-label="Akkord einfügen"></div>
+    <div class="ed-zeile">
+      <input type="text" id="ed-akkord" placeholder="Akkord, z. B. F#m" autocomplete="off" spellcheck="false" aria-label="Eigenen Akkord eingeben">
+      <button type="button" class="knopf zweit klein" id="ed-akkord-dazu">Einfügen</button>
+      <select id="ed-abschnitt" aria-label="Abschnitt einfügen">
+        <option value="">Abschnitt einfügen</option>
+        <option>Intro</option><option>Strophe</option><option>Pre-Chorus</option><option>Refrain</option>
+        <option>Bridge</option><option>Solo</option><option>Zwischenspiel</option><option>Outro</option>
+      </select>
+      <button type="button" class="knopf zweit klein" id="ed-umwandeln" title="Akkorde, die in eigenen Zeilen über dem Text stehen, an die Silben setzen">Akkorde über Text umwandeln</button>
+    </div>
+  </div>
+  <div class="editor-flaeche">
+    <label class="feld grow"><span>Text mit Akkorden</span>
+      <textarea id="ed-text" spellcheck="false" autocapitalize="off" autocomplete="off" rows="18"></textarea>
+    </label>
+    <div class="feld grow vorschau-feld"><span>Vorschau</span><div class="lied vorschau karte" id="ed-vorschau"></div></div>
+  </div>
+  <details class="hilfe">
+    <summary>So schreibst du Songs</summary>
+    <ul>
+      <li>Akkorde in eckigen Klammern direkt vor die Silbe: <code>[G]Eine Welt liegt [C]dir zu Füßen</code></li>
+      <li>Abschnitte in eine eigene Zeile: <code>[Refrain]</code>, <code>[Strophe 2]</code></li>
+      <li>Nur Akkorde in einer Zeile ergeben eine Akkordfolge: <code>[C] [F] [G]</code></li>
+      <li>Hinweise: <code>{c: Kapo im 2. Bund}</code>, Anmerkungen über dem Text: <code>[*2x]</code></li>
+      <li>B♭ schreibst du als <code>Bb</code>, H als <code>H</code>. Ein einzelnes <code>B</code> liest die App als H.</li>
+      <li>Text aus dem Netz mit Akkorden in eigenen Zeilen einfügen und auf „Akkorde über Text umwandeln“ tippen.</li>
+      <li>Jedes Speichern legt eine neue Version an. Ältere Versionen findest du im Song unter „Versionen“.</li>
+    </ul>
+  </details>
+</main>
+
+<!-- ===================================================== Einstellungen -->
+<main id="v-einstellungen" class="ansicht seite" aria-label="Einstellungen" hidden>
+  <div class="leiste">
+    <button type="button" class="zurueck" id="einstellungen-zurueck"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>Zurück</span></button>
+  </div>
+  <h2 class="editor-titel">Einstellungen</h2>
+  <div class="karte einstellungen">
+    <div class="e-zeile">
+      <div><b>Akkordnamen</b><p class="leise klein-text">Deutsch mit H und B♭ oder international mit B und B♭.</p></div>
+      <div class="segment klein" id="e-namen" role="radiogroup" aria-label="Akkordnamen">
+        <button type="button" role="radio" data-wert="deutsch">H, B♭</button>
+        <button type="button" role="radio" data-wert="international">B, B♭</button>
+      </div>
+    </div>
+    <div class="e-zeile">
+      <div><b>Bildschirm anlassen</b><p class="leise klein-text">Solange ein Song offen ist, geht der Bildschirm nicht aus.</p></div>
+      <button type="button" class="chip" id="e-wach" aria-pressed="true">An</button>
+    </div>
+  </div>
+  <h3 class="e-ueber">Deine Daten</h3>
+  <div class="karte einstellungen">
+    <p class="klein-text e-text" id="e-statistik"></p>
+    <p class="klein-text leise e-text">Eigene Songs, Versionen und Setlisten speichert jedes Gerät für sich. Mit einer Sicherung nimmst du sie auf ein anderes Gerät mit.</p>
+    <p class="klein-text leise e-text" id="e-dauerhaft" hidden></p>
+    <div class="e-knoepfe">
+      <button type="button" class="knopf zweit" id="e-export">Sicherung teilen oder sichern</button>
+      <label class="knopf zweit datei-knopf">Sicherung laden<input type="file" id="e-import" accept=".json,application/json"></label>
+    </div>
+    <p class="klein-text" id="e-meldung" aria-live="polite"></p>
+  </div>
+  <p class="leise klein-text e-stand" id="e-stand"></p>
+</main>
+
+<footer class="fuss" id="fuss">
+  <p id="offline-status" class="leise"></p>
+  <p id="install-zeile" hidden><button type="button" class="link-knopf" id="install-oeffnen">Songbook als App installieren</button></p>
+</footer>
+
+<!-- ===================================================== Griff zum Antippen -->
+<div class="griff-pop karte" id="griff-pop" role="dialog" aria-label="Griff" hidden>
+  <div class="gp-kopf">
+    <b id="gp-name"></b>
+    <button type="button" class="icon-knopf ih-zu" id="gp-zu" aria-label="Schließen">×</button>
+  </div>
+  <div class="segment klein gp-inst" id="gp-inst" role="radiogroup" aria-label="Instrument">
+    <button type="button" role="radio" data-inst="gitarre">Gitarre</button>
+    <button type="button" role="radio" data-inst="ukulele">Ukulele</button>
+  </div>
+  <div class="gp-bild" id="gp-bild"></div>
+  <p class="gp-art leise" id="gp-art"></p>
+  <div class="gp-knoepfe">
+    <button type="button" class="icon-knopf klein" id="gp-vor" aria-label="Vorheriger Griff">‹</button>
+    <button type="button" class="knopf klein" id="gp-spielen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Anhören</button>
+    <button type="button" class="icon-knopf klein" id="gp-nach" aria-label="Nächster Griff">›</button>
+  </div>
+</div>
+
+<!-- ===================================================== Dialoge -->
+<dialog class="dialog karte" id="dlg">
+  <form method="dialog" class="dlg-form" id="dlg-form">
+    <h2 id="dlg-titel"></h2>
+    <div id="dlg-inhalt"></div>
+    <div class="dlg-knoepfe" id="dlg-knoepfe"></div>
+  </form>
+</dialog>
+
+<!-- ===================================================== Hinweis zum Installieren (iPhone, iPad, Android) -->
+<aside id="install-hinweis" class="install-hinweis" aria-labelledby="ih-titel" hidden>
+  <img class="ih-icon" src="icons/icon.svg" alt="" width="44" height="44">
+  <div class="ih-text">
+    <h2 id="ih-titel">Als App installieren</h2>
+    <p id="ih-nutzen"></p>
+    <ol id="ih-schritte"></ol>
+    <p id="ih-notiz" class="leise" hidden></p>
+    <button type="button" class="knopf" id="ih-installieren" hidden>Installieren</button>
+  </div>
+  <button type="button" class="icon-knopf ih-zu" id="ih-zu" aria-label="Hinweis schließen" title="Schließen">×</button>
+</aside>
+
+<div class="meldung" id="meldung" role="status" aria-live="polite" hidden></div>
+
+<script src="griffe.js"></script>
+<script src="musik.js"></script>
+<script src="lieder.js"></script>
+<script src="songs.js"></script>
+<script src="pdf.js"></script>
+<script src="installieren.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

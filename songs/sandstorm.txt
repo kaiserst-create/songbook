@@ -1,0 +1,37 @@
+{title: Sandstorm}
+{artist: Darude}
+[Intro]
+[Em] [C] [G] [Em] [Em]
+[C] [G] [Em] [Em] [C] [G]
+[Em] [Em] [C] [G] [Em]
+
+[Theme 1]
+[Em] [C] [G] [Em] [Em]
+[C] [G] [Em] [Em] [C] [G]
+[Em] [Em] [C] [G] [Em]
+
+[Theme 2]
+[Em]
+
+[Bridge]
+[Em]
+
+[Break]
+[Em] [C] [G] [Em] [Em]
+[C] [G] [Em] [Em] [C] [G]
+[Em] [Em] [C] [G] [Em]
+[Em]
+
+[Theme]
+[Em] [C] [G] [Em] [Em]
+[C] [G] [Em] [Em] [C] [G]
+[Em] [Em] [C] [G] [Em]
+
+[Bridge]
+[Em]
+
+[Theme]
+[Em] [C] [G] [Em] [Em]
+[C] [G] [Em] [Em] [C] [G]
+[Em] [Em] [C] [G] [Em]
+[Em]
