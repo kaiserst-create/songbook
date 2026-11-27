@@ -45,11 +45,13 @@ var SC = (function () {
     // zusätzlich für das Songbook
     '7sus4':  [[0, 5, 7, 10], [0, 5, 10]],
     'maj9':   [[0, 4, 7, 11, 2], [0, 4, 11, 2]],
+    // zusätzlich für Songbook und Biene Meier
+    '7♭13':   [[0, 4, 7, 10, 8], [0, 4, 10, 8]],
   };
   var TYPE_NAMES = {
     '': 'Dur', 'm': 'Moll', '7': '7', 'm7': 'm7', 'maj7': 'maj7', '6': '6', 'm6': 'm6', '9': '9',
     'sus4': 'sus4', 'sus2': 'sus2', 'add9': 'add9', 'm(add9)': 'm(add9)', 'm9': 'm9', '5': '5 (Power)',
-    '°': '° (vermindert)', '°7': '°7 (dim7)', 'm7♭5': 'm7♭5 (ø)', '+': '+ (aug)', '7#9': '7#9', '7♭9': '7♭9', '7sus4': '7sus4', 'maj9': 'maj9',
+    '°': '° (vermindert)', '°7': '°7 (dim7)', 'm7♭5': 'm7♭5 (ø)', '+': '+ (aug)', '7#9': '7#9', '7♭9': '7♭9', '7sus4': '7sus4', 'maj9': 'maj9', '7♭13': '7♭13',
   };
   var TUNING = { gitarre: [4, 9, 2, 7, 11, 4], ukulele: [7, 0, 4, 9] };
   var MIDI = { gitarre: [40, 45, 50, 55, 59, 64], ukulele: [67, 60, 64, 69] };

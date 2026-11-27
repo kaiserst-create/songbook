@@ -36,6 +36,7 @@ var SB_PDF = (function () {
     return '(' + o + ')';
   }
   function zahl(x) { return (Math.round(x * 100) / 100).toString(); }
+  function minuten(x) { return (Math.round(x * 10) / 10).toString().replace('.', ',') + ' Min.'; }
 
   // ------------------------------------------------------------------ Seite mit Zeichenbefehlen
   var BREITE = 595.28, HOEHE = 841.89, RAND_L = 50, RAND_R = 50, OBEN = 54, UNTEN = 56;
@@ -187,6 +188,10 @@ var SB_PDF = (function () {
       sp.seite.text(RAND_L, sp.y - 10, (s.n > 0 ? s.n + ' Halbt' + (s.n === 1 ? 'on' : 'öne') + ' höher' : (-s.n) + ' Halbt' + (s.n === -1 ? 'on' : 'öne') + ' tiefer') + ' als im Original', 9.5, 'F1', FARBE.akkord);
       sp.y -= 14;
     }
+    if (s.stimmung) {   // B♭- oder E♭-Instrumente
+      sp.seite.text(RAND_L, sp.y - 10, s.stimmung, 9.5, 'F2', FARBE.abschnitt);
+      sp.y -= 14;
+    }
     sp.y -= 8;
     // Griffbilder
     if (s.griffe && s.griffe.length) {
@@ -209,7 +214,9 @@ var SB_PDF = (function () {
       if (z.art === 'abschnitt') {
         sp.platz(ZEILE * 2 + 8, s.titel);
         sp.y -= 5;
-        sp.seite.text(RAND_L, sp.y - 9, z.text.toUpperCase(), 8.5, 'F2', FARBE.abschnitt);
+        var ab = L.abschnittTeile(z.text), abName = ab.name.toUpperCase();
+        sp.seite.text(RAND_L, sp.y - 9, abName, 8.5, 'F2', FARBE.abschnitt);
+        if (ab.notiz) sp.seite.text(RAND_L + breite(abName, 8.5, true) + 5, sp.y - 9, ab.notiz, 9, 'F3', FARBE.leise);   // Notiz als Hinweis
         sp.y -= 13;
         return;
       }
@@ -236,7 +243,7 @@ var SB_PDF = (function () {
           if (x + gb > BREITE - RAND_R && x > RAND_L) { sp.y -= ZEILE; sp.platz(ZEILE, s.titel); x = RAND_L; }
           teile.forEach(function (t) {
             if (t.name) akkZeichnen(sp.seite, x, sp.y - 10.5, t.name, AKK_GR + 0.5, FARBE.akkord);
-            else sp.seite.text(x, sp.y - 10.5, t.anm || t.zw, 9.5, t.anm ? 'F3' : 'F1', FARBE.leise);
+            else sp.seite.text(x, sp.y - 10.5, t.anm || t.zw, 9.5, t.anm || L.istWdh(t.zw) ? 'F3' : 'F1', FARBE.leise);
             x += t.b + 1.5;
           });
           x += 7.5;
@@ -248,7 +255,7 @@ var SB_PDF = (function () {
       if (!mitAkk) {
         umbrechen(z.teile.map(function (p) { return p.tx; }).join('').replace(/\t/g, ' '), breiteNutz, GR, false).forEach(function (t) {
           sp.platz(ZEILE, s.titel);
-          sp.seite.text(RAND_L, sp.y - GR, t, GR, 'F1', FARBE.text);
+          textMitWdh(sp.seite, RAND_L, sp.y - GR, t, L);
           sp.y -= ZEILE;
         });
         return;
@@ -272,13 +279,21 @@ var SB_PDF = (function () {
             var x = RAND_L + e.x + t.x;
             if (t.akk && t.akk.name) akkZeichnen(sp.seite, x, yA, t.akk.name, AKK_GR, FARBE.akkord);
             else if (t.akk) sp.seite.text(x, yA, t.akk.anm, AKK_GR - 1, 'F3', FARBE.leise);
-            if (t.tx.trim()) sp.seite.text(x, yT, t.tx.replace(/\s+$/, ''), GR, 'F1', FARBE.text);
+            if (t.tx.trim()) textMitWdh(sp.seite, x, yT, t.tx.replace(/\s+$/, ''), L);
           });
         });
         sp.y -= h;
       });
     });
   };
+
+  // Liedtext mit Wiederholungen („x2“, „(4x)“) kursiv und grau, wie in der App
+  function textMitWdh(seite, x, y, text, L) {
+    L.wdhTeile(text).forEach(function (w) {
+      seite.text(x, y, w.t, GR, w.wdh ? 'F3' : 'F1', w.wdh ? FARBE.leise : FARBE.text);
+      x += breite(w.t, GR, false);
+    });
+  }
 
   function umbrechen(text, max, groesse, fett) {
     var w = text.split(/(\s+)/), zeilen = [], z = '';
@@ -291,7 +306,7 @@ var SB_PDF = (function () {
   }
 
   // ------------------------------------------------------------------ Datei
-  // o: { titel, songs: [{ lied, o, titel, griffe, inst, n }], inhalt: [{ titel } | { trenner }] (nur Setlisten) }
+  // o: { titel, songs: [{ lied, o, titel, griffe, inst, n, stimmung }], inhalt: [{ titel, dauer } | { trenner }], dauer, stimmung (nur Setlisten) }
   function erzeuge(o, L) {
     L = L || SB_LIED;
     var satz = new Satz(), start = [];
@@ -307,7 +322,8 @@ var SB_PDF = (function () {
         var iv = new Satz(), nr = 0, k = 0;
         iv.seite.text(RAND_L, iv.y - 22, o.titel, 22, 'F2', FARBE.text);
         iv.y -= 32;
-        iv.seite.text(RAND_L, iv.y - 10, o.songs.length === 1 ? 'Ein Song' : o.songs.length + ' Songs', 10, 'F1', FARBE.leise);
+        var unter = (o.songs.length === 1 ? 'Ein Song' : o.songs.length + ' Songs') + (o.dauer ? ' · ' + minuten(o.dauer) : '') + (o.stimmung ? ' · ' + o.stimmung : '');
+        iv.seite.text(RAND_L, iv.y - 10, unter, 10, 'F1', FARBE.leise);
         iv.y -= 26;
         o.inhalt.forEach(function (e) {
           iv.platz(19);
@@ -322,6 +338,7 @@ var SB_PDF = (function () {
           iv.seite.text(RAND_L, iv.y - 11.5, nr + '.', 11.5, 'F1', FARBE.leise);
           iv.seite.text(RAND_L + 26, iv.y - 11.5, e.titel, 11.5, 'F1', FARBE.text);
           iv.seite.text(BREITE - RAND_R - breite(seite, 11, false), iv.y - 11.5, seite, 11, 'F1', FARBE.leise);
+          if (e.dauer) { var mt = minuten(e.dauer); iv.seite.text(BREITE - RAND_R - 40 - breite(mt, 10, false), iv.y - 11.5, mt, 10, 'F1', FARBE.leise); }
           iv.y -= 19;
         });
         return iv;

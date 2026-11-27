@@ -1,4 +1,4 @@
-// Songbook: Zustand, eigene Daten, Navigation und alle Ansichten.
+// Songbook: Zustand, eigene Daten, Navigation und alle Ansichten (gleiche Funktionen wie Biene Meier: „nur Akkorde“, B♭/E♭, Spielzeiten).
 // Songs lesen und darstellen: lieder.js. Griffe, Griffbilder und Klang: musik.js. PDF: pdf.js.
 (function () {
   'use strict';
@@ -6,6 +6,15 @@
   var L = SB_LIED;
   var esc = L.esc;
   var enc = encodeURIComponent;
+
+  // ------------------------------------------------------------------ Instrumente in B♭ und E♭
+  // B♭-Instrumente (Trompete, Tenorsax, Klarinette) klingen einen Ganzton tiefer als notiert: sie lesen 2 Halbtöne höher.
+  // E♭-Instrumente (Altsax, Baritonsax) klingen eine große Sexte tiefer: sie lesen 9 Halbtöne höher (gleich 3 tiefer).
+  var STIMMUNG = {
+    c: { n: 0, kurz: 'C', name: '' },
+    b: { n: 2, kurz: 'B♭', name: 'für B♭-Instrumente' },
+    es: { n: 9, kurz: 'E♭', name: 'für E♭-Instrumente' },
+  };
 
   // ------------------------------------------------------------------ Einstellungen (bleiben im Browser)
   var SCHLUESSEL = 'songbook-zustand';
@@ -25,6 +34,8 @@
     letzteScroll: 0,      // Scrollposition dort
     suche: '',            // Suchbegriff in der Songliste
     entwurf: {},          // offener Editor: { id, titel, kuenstler, text }
+    transInst: 'c',       // alle Songs für c (klingend), b (B♭-Instrumente) oder es (E♭-Instrumente)
+    nurAkkorde: false,    // Liedtext ausblenden: nur Akkorde, Abschnitte und Hinweise
   };
   try {
     var gespeichert = JSON.parse(localStorage.getItem(SCHLUESSEL) || '{}') || {};
@@ -36,6 +47,7 @@
   } catch (e) { /* ohne Speicher geht es auch */ }
   if (['songs', 'setlisten'].indexOf(S.reiter) < 0) S.reiter = 'songs';
   if (['aus', 'gitarre', 'ukulele'].indexOf(S.inst) < 0) S.inst = 'aus';
+  if (!STIMMUNG.hasOwnProperty(S.transInst)) S.transInst = 'c';
   if (['gitarre', 'ukulele'].indexOf(S.popInst) < 0) S.popInst = 'gitarre';
   S.schrift = Math.min(32, Math.max(13, Math.round(S.schrift)));
   S.scrollTempo = Math.min(10, Math.max(1, Math.round(S.scrollTempo)));
@@ -66,7 +78,12 @@
       d.setlisten[id] = {
         id: id, name: l.name, eigen: !!l.eigen, erstellt: +l.erstellt || 0, geaendert: +l.geaendert || 0,
         eintraege: l.eintraege.filter(function (e) { return e && (typeof e.song === 'string' || typeof e.trenner === 'string'); })
-          .map(function (e) { return typeof e.song === 'string' ? { song: e.song } : { trenner: e.trenner }; }),
+          .map(function (e) {
+            if (typeof e.song !== 'string') return { trenner: e.trenner };
+            var x = { song: e.song };
+            if (typeof e.dauer === 'number' && isFinite(e.dauer) && e.dauer > 0) x.dauer = e.dauer;
+            return x;
+          }),
       };
     });
     return d;
@@ -136,6 +153,15 @@
     return datenSpeichern();
   }
   function songsIn(l) { return l.eintraege.filter(function (e) { return e.song && gibtSong(e.song); }); }
+  // Spielzeiten in Minuten (im Ändern-Modus eintragbar)
+  function dauerSumme(eintraege) {
+    return eintraege.reduce(function (a, e) { return a + (e.song && gibtSong(e.song) && e.dauer ? e.dauer : 0); }, 0);
+  }
+  function minuten(x) { return (Math.round(x * 10) / 10).toString().replace('.', ',') + ' Min.'; }
+  function liesMinuten(t) {
+    var x = parseFloat(String(t).replace(',', '.'));
+    return isFinite(x) && x > 0 ? Math.round(x * 10) / 10 : 0;
+  }
 
   // ------------------------------------------------------------------ Kleinigkeiten: Meldung, Dialog, Teilen
   var meldungZeit = 0;
@@ -362,7 +388,8 @@
   function zeichneSetlisten() {
     var html = setlistenAlle().map(function (l) {
       var n = songsIn(l).length;
-      var info = (n === 1 ? 'ein Song' : n + ' Songs') + (l.eigen ? ' · eigene Setliste' : (D.setlisten[l.id] ? ' · geändert' : ''));
+      var dz = dauerSumme(l.eintraege);
+      var info = (n === 1 ? 'ein Song' : n + ' Songs') + (dz ? ' · ' + minuten(dz) : '') + (l.eigen ? ' · eigene Setliste' : (D.setlisten[l.id] ? ' · geändert' : ''));
       return '<a class="eintrag" href="#/set/' + enc(l.id) + '"><span class="e-haupt"><span class="e-titel">' + esc(l.name) + '</span><span class="e-unter">' + esc(info) + '</span></span>' + PFEIL + '</a>';
     });
     $('#setlisten-liste').innerHTML = html.join('') || '<p class="leer-hinweis">Noch keine Setlisten.</p>';
@@ -384,7 +411,8 @@
 
   // ------------------------------------------------------------------ Song
   var aktSong = null, aktKontext = null;
-  function opt(s) { return L.namenOpt(s.lied, S.transp[s.id] || 0, S.deutsch); }
+  function opt(s) { return L.namenOpt(s.lied, (S.transp[s.id] || 0) + STIMMUNG[S.transInst].n, S.deutsch); }
+  function anzeige(s) { return S.nurAkkorde ? L.nurAkkorde(s.lied) : s.lied; }
   function zeigeSong(id, kontext) {
     var neu = !aktSong || aktSong !== id || JSON.stringify(aktKontext) !== JSON.stringify(kontext) || ansicht !== 'song';
     zeige('song');
@@ -442,10 +470,14 @@
     $('#lied-unter').textContent = [lied.untertitel, lied.kuenstler].filter(Boolean).join(' · ');
     var info = [];
     if (n) info.push('<span class="tr">' + (n > 0 ? n + ' Halbt' + (n === 1 ? 'on' : 'öne') + ' höher' : (-n) + ' Halbt' + (n === -1 ? 'on' : 'öne') + ' tiefer') + '</span>');
+    if (S.transInst !== 'c') info.push('<span class="ti-info">' + STIMMUNG[S.transInst].name + '</span>');
+    if (S.nurAkkorde) info.push('nur Akkorde');
     if (lied.capo) info.push('Kapo ' + esc(lied.capo));
     $('#lied-info').innerHTML = info.join(' · ');
     var lw = $('#lied');
-    lw.innerHTML = L.html(lied, o);
+    lw.innerHTML = L.html(anzeige(s), o);
+    lw.classList.toggle('nur-akkorde', S.nurAkkorde);
+    $('#text-knopf').setAttribute('aria-pressed', String(S.nurAkkorde));
     lw.style.setProperty('--schrift', S.schrift + 'px');
     akkordAbstand(lw);
     // Werkzeuge
@@ -598,6 +630,56 @@
     $('#scroll-start').setAttribute('aria-pressed', 'false');
   }
   $('#scroll-start').onclick = function () { if (scrollAn) stoppScroll(); else startScroll(); };
+
+  // Liedtext ausblenden: gilt für alle Songs, bleibt gespeichert
+  $('#text-knopf').onclick = function () {
+    S.nurAkkorde = !S.nurAkkorde;
+    speichern();
+    zeichneSong();
+  };
+
+  // ------------------------------------------------------------------ Zentraler Umschalter C, B♭, E♭ (in jeder Ansicht oben)
+  function tiAktualisieren() {
+    var st = STIMMUNG[S.transInst];
+    document.querySelectorAll('.ti-knopf').forEach(function (b) {
+      b.textContent = st.kurz;
+      b.classList.toggle('an', S.transInst !== 'c');
+      b.setAttribute('aria-label', 'Alle Songs transponieren, jetzt ' + (S.transInst === 'c' ? 'klingend in C' : st.name));
+    });
+    document.querySelectorAll('#ti-menue [data-ti], #e-ti [data-ti]').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.ti === S.transInst)); });
+  }
+  function tiZu() {
+    $('#ti-menue').hidden = true;
+    document.querySelectorAll('.ti-knopf').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+  }
+  function tiWaehlen(w) {
+    if (!STIMMUNG.hasOwnProperty(w)) return;
+    S.transInst = w;
+    speichern();
+    tiAktualisieren();
+    tiZu();
+    if (ansicht === 'song') zeichneSong();
+    if (ansicht === 'editor') edVorschau();
+    melde(w === 'c' ? 'Alle Songs klingend in C' : 'Alle Songs ' + STIMMUNG[w].name);
+  }
+  document.addEventListener('click', function (e) {
+    var k = e.target.closest('.ti-knopf');
+    if (k) {
+      e.stopPropagation();
+      var m = $('#ti-menue'), war = !m.hidden;
+      menueZu(); griffZu(); tiZu();
+      if (war) return;
+      m.hidden = false;
+      k.setAttribute('aria-expanded', 'true');
+      var r = k.getBoundingClientRect();
+      m.style.top = Math.round(r.bottom + 6) + 'px';
+      m.style.left = Math.round(Math.max(8, Math.min(window.innerWidth - m.offsetWidth - 8, r.right - m.offsetWidth))) + 'px';
+      return;
+    }
+    var b = e.target.closest('#ti-menue [data-ti], #e-ti [data-ti]');
+    if (b) { tiWaehlen(b.dataset.ti); return; }
+    if (!$('#ti-menue').hidden && !e.target.closest('#ti-menue')) tiZu();
+  }, true);
   function tempo(d) {
     S.scrollTempo = Math.min(10, Math.max(1, S.scrollTempo + d));
     speichern();
@@ -642,6 +724,7 @@
   document.addEventListener('keydown', function (e) {
     if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]')) return;
     if (e.key === 'Escape') {
+      if (!$('#ti-menue').hidden) { tiZu(); return; }
       if (!$('#griff-pop').hidden) { griffZu(); return; }
       if (!$('#song-menue').hidden || !$('#setliste-menue').hidden) { menueZu(); return; }
     }
@@ -779,20 +862,26 @@
   }
 
   // ------------------------------------------------------------------ Griff zum Antippen
-  var pop = { griff: '', name: '', inst: 'gitarre', idx: 0 };
+  var pop = { griff: '', name: '', inst: 'gitarre', idx: 0, anker: null };
   function griffAuf(el) {
     pop.griff = el.dataset.griff;
     pop.name = el.dataset.name || el.textContent;
     pop.inst = S.inst !== 'aus' ? S.inst : S.popInst;
     pop.idx = S.griffVar[pop.inst + '|' + pop.griff] || 0;
+    pop.anker = el.getBoundingClientRect();
+    $('#griff-pop').hidden = false;
     zeichnePop();
-    var p = $('#griff-pop'), r = el.getBoundingClientRect();
-    p.hidden = false;
+  }
+  // Unter (oder über) dem Akkord, immer ganz im Fenster; nach jedem Neuzeichnen, weil sich die Größe ändern kann
+  function popPlatzieren() {
+    var p = $('#griff-pop'), r = pop.anker;
+    if (p.hidden || !r) return;
     var w = p.offsetWidth, h = p.offsetHeight;
     var x = Math.min(window.innerWidth - w - 8, Math.max(8, r.left + r.width / 2 - w / 2));
     var y = r.bottom + 8;
-    if (y + h > window.innerHeight - 8) y = Math.max(8, r.top - h - 8);
-    p.style.left = x + 'px';
+    if (y + h > window.innerHeight - 8) y = r.top - h - 8;
+    y = Math.max(8, Math.min(y, window.innerHeight - h - 8));
+    p.style.left = Math.max(8, x) + 'px';
     p.style.top = y + 'px';
   }
   function zeichnePop() {
@@ -806,6 +895,7 @@
     $('#gp-vor').disabled = $('#gp-nach').disabled = v.length < 2;
     $('#gp-spielen').disabled = !w;
     if (v.hinweis) $('#gp-art').textContent += ' ' + v.hinweis;
+    popPlatzieren();
   }
   function griffZu() { $('#griff-pop').hidden = true; }
   function waehleGriff(d) {
@@ -862,7 +952,13 @@
     if (!l) { zurueck('#/'); return; }
     $('#setliste-name').textContent = l.name;
     var n = songsIn(l).length;
-    $('#setliste-info').textContent = (n === 1 ? 'Ein Song' : n + ' Songs') + (l.eigen ? ' · eigene Setliste' : ' · aus dem Songbook' + (D.setlisten[l.id] ? ', geändert' : ''));
+    var gesamt = dauerSumme(l.eintraege);
+    $('#setliste-info').textContent = (n === 1 ? 'Ein Song' : n + ' Songs') + (gesamt ? ' · ' + minuten(gesamt) : '') + (l.eigen ? ' · eigene Setliste' : ' · aus dem Songbook' + (D.setlisten[l.id] ? ', geändert' : ''));
+    // Summe der Songs vor jedem Trenner (das Set davor)
+    var setSumme = [], lauf = 0;
+    l.eintraege.forEach(function (e, i) {
+      if (e.trenner !== undefined) { setSumme[i] = lauf; lauf = 0; } else if (e.song && gibtSong(e.song) && e.dauer) lauf += e.dauer;
+    });
     $('#setliste-aendern').setAttribute('aria-pressed', String(aendern));
     $('#setliste-aendern').textContent = aendern ? 'Fertig' : 'Ändern';
     $('#aendern-leiste').hidden = !aendern;
@@ -874,14 +970,18 @@
         '<button type="button" class="icon-knopf" data-tun="runter" data-i="' + i + '" aria-label="Nach unten"' + (i === l.eintraege.length - 1 ? ' disabled' : '') + '>' + KNOPF_RUNTER + '</button>' +
         '<button type="button" class="icon-knopf" data-tun="weg" data-i="' + i + '" aria-label="Entfernen">' + KNOPF_WEG + '</button></span>' : '';
       if (e.trenner !== undefined) {
-        return '<li><div class="eintrag trenner"><span class="e-haupt"><span class="e-titel">' + esc(e.trenner) + '</span></span>' + akt + '</div></li>';
+        return '<li><div class="eintrag trenner"><span class="e-haupt"><span class="e-titel">' + esc(e.trenner) + '</span></span>' +
+          (setSumme[i] ? '<span class="e-dauer" title="Spielzeit des Sets davor">davor ' + minuten(setSumme[i]) + '</span>' : '') + akt + '</div></li>';
       }
       if (!gibtSong(e.song)) return '<li><div class="eintrag"><span class="nr">–</span><span class="e-haupt"><span class="e-titel leise">Song fehlt</span></span>' + akt + '</div></li>';
       nr++;
       var s = song(e.song), u = [s.lied.kuenstler, S.transp[s.id] ? 'transponiert' : ''].filter(Boolean).join(' · ');
       var inhalt = '<span class="nr">' + nr + '</span><span class="e-haupt"><span class="e-titel">' + esc(s.titel) + '</span>' + (u ? '<span class="e-unter">' + esc(u) + '</span>' : '') + '</span>';
-      return aendern ? '<li><div class="eintrag">' + inhalt + akt + '</div></li>'
-        : '<li><a class="eintrag" href="#/set/' + enc(l.id) + '/' + i + '">' + inhalt + PFEIL + '</a></li>';
+      var dauer = aendern
+        ? '<input type="text" class="e-dauer-feld" inputmode="decimal" data-dauer="' + i + '" value="' + (e.dauer ? String(e.dauer).replace('.', ',') : '') + '" placeholder="Min." aria-label="Spielzeit in Minuten">'
+        : (e.dauer ? '<span class="e-dauer">' + minuten(e.dauer) + '</span>' : '');
+      return aendern ? '<li><div class="eintrag">' + inhalt + dauer + akt + '</div></li>'
+        : '<li><a class="eintrag" href="#/set/' + enc(l.id) + '/' + i + '">' + inhalt + dauer + PFEIL + '</a></li>';
     }).join('');
     $('#setliste-leer').hidden = l.eintraege.length > 0;
     $('#setliste-menue [data-aktion="loeschen"]').hidden = !l.eigen;
@@ -902,6 +1002,17 @@
     else if (b.dataset.tun === 'weg') x.splice(i, 1);
     setlisteSpeichern(l);
     zeichneSetliste();
+  });
+  $('#setliste-eintraege').addEventListener('change', function (e) {
+    var f = e.target.closest('input[data-dauer]');
+    if (!f) return;
+    var l = setliste(aktSet), x = l.eintraege[parseInt(f.dataset.dauer, 10)];
+    if (!x || !x.song) return;
+    var m = liesMinuten(f.value);
+    if (m) x.dauer = m; else delete x.dauer;
+    setlisteSpeichern(l);
+    var gesamt = dauerSumme(l.eintraege), n = songsIn(l).length;
+    $('#setliste-info').textContent = (n === 1 ? 'Ein Song' : n + ' Songs') + (gesamt ? ' · ' + minuten(gesamt) : '') + (l.eigen ? ' · eigene Setliste' : ' · aus dem Songbook, geändert');
   });
   $('#setliste-songs-dazu').onclick = function () {
     var l = setliste(aktSet);
@@ -1017,7 +1128,8 @@
   var vorschauZeit = 0;
   function edVorschau() {
     var lied = L.lies(edZusammen());
-    $('#ed-vorschau').innerHTML = L.html(lied, L.namenOpt(lied, 0, S.deutsch)) || '<p class="leise">Hier erscheint dein Song.</p>';
+    $('#ed-vorschau').innerHTML = L.html(lied, L.namenOpt(lied, STIMMUNG[S.transInst].n, S.deutsch)) || '<p class="leise">Hier erscheint dein Song.</p>';
+    $('#ed-vorschau-titel').textContent = 'Vorschau' + (S.transInst !== 'c' ? ' ' + STIMMUNG[S.transInst].name : '');
     akkordAbstand($('#ed-vorschau'));
     var o = { n: 0, deutsch: true, art: 'gemischt' };
     var im = L.akkorde(lied).map(function (a) { return L.akkordName(a, o).replace(/♭/g, 'b'); });
@@ -1172,7 +1284,7 @@
       var g = L.griffName(a, o.n), w = g ? griffWahl(inst, g) : null;
       return { name: L.akkordName(a, o), f: w ? w.f : null };
     });
-    return { lied: s.lied, o: o, titel: s.titel, griffe: griffBilder, inst: inst, n: o.n ? (S.transp[id] || 0) : 0 };
+    return { lied: anzeige(s), o: o, titel: s.titel, griffe: griffBilder, inst: inst, n: S.transp[id] || 0, stimmung: STIMMUNG[S.transInst].name };
   }
   function songPdf(id) {
     try {
@@ -1187,7 +1299,8 @@
       var daten = SB_PDF.erzeuge({
         titel: l.name, songs: songs,
         inhalt: l.eintraege.filter(function (e) { return e.trenner !== undefined || (e.song && gibtSong(e.song)); })
-          .map(function (e) { return e.trenner !== undefined ? { trenner: e.trenner } : { titel: song(e.song).titel }; }),
+          .map(function (e) { return e.trenner !== undefined ? { trenner: e.trenner } : { titel: song(e.song).titel, dauer: e.dauer }; }),
+        dauer: dauerSumme(l.eintraege), stimmung: STIMMUNG[S.transInst].name,
       });
       teileDatei(daten, dateiname(l.name) + '.pdf', 'application/pdf');
     } catch (e) { melde('PDF ging nicht: ' + e.message); }
@@ -1212,6 +1325,7 @@
     SC.Klang.ruhe();
     wachHalten(false);
     griffZu();
+    tiZu();
     clearTimeout(suchZeit); clearTimeout(vorschauZeit); clearTimeout(abstandZeit);
     adressenFrei();
   }
@@ -1223,6 +1337,7 @@
 
   // ------------------------------------------------------------------ Start
   SB_INSTALL.einrichten({ S: S, speichern: speichern });
+  tiAktualisieren();
   // Öffnet die App ohne Ziel (vom Home-Bildschirm, nach einem Neustart), geht es dort weiter, wo du warst
   var startEntwurf = null, startPos = null;
   if (!/^#\/./.test(location.hash) && typeof S.letzte === 'string' && /^#\/./.test(S.letzte)) {

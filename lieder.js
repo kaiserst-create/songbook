@@ -141,7 +141,8 @@ var SB_LIED = (function () {
     'maj7': 'maj7', 'M7': 'maj7', 'Δ': 'maj7', 'Δ7': 'maj7', 'maj': 'maj7', 'j7': 'maj7',
     '6': '6', 'm6': 'm6', '9': '9', 'm9': 'm9', 'maj9': 'maj9', 'add9': 'add9', 'add2': 'add9',
     'madd9': 'm(add9)', 'm(add9)': 'm(add9)', 'madd2': 'm(add9)',
-    'sus4': 'sus4', 'sus': 'sus4', '4': 'sus4', 'sus2': 'sus2', '2': 'sus2', '7sus4': '7sus4', '7sus': '7sus4',
+    'sus4': 'sus4', 'sus': 'sus4', '4': 'sus4', 'sus2': 'sus2', '2': 'sus2', '7sus4': '7sus4', '7sus': '7sus4', 'sus7': '7sus4', 'sus47': '7sus4',
+    '7b13': '7♭13', '7♭13': '7♭13',
     'dim': '°', '°': '°', 'o': '°', 'dim7': '°7', '°7': '°7', 'm7b5': 'm7♭5', 'm7♭5': 'm7♭5', 'ø': 'm7♭5', 'ø7': 'm7♭5',
     'aug': '+', '+': '+', '+5': '+', '#5': '+', '5': '5', '7#9': '7#9', '7b9': '7♭9', '7♭9': '7♭9',
   };
@@ -268,6 +269,48 @@ var SB_LIED = (function () {
     return o;
   }
 
+  // ------------------------------------------------------------------ Hinweise im Text (wie Biene Meier)
+  // Wiederholungen wie „2x“, „x2“, „(4x)“, „14×“ sind Hinweise (Nutzer). Davor und danach kein Buchstabe und keine Ziffer.
+  var WDH_RE = /\(?(\d+\s?[xX×]|[xX×]\s?\d+)\)?/g;
+  var ZEICHEN_WORT = /[A-Za-zÄÖÜäöüß0-9]/;
+  function wdhTeile(t) {
+    var out = [], pos = 0, m;
+    t = String(t);
+    WDH_RE.lastIndex = 0;
+    while ((m = WDH_RE.exec(t))) {
+      var a = m.index, b = a + m[0].length, w = m[0];
+      // Klammer nur auf einer Seite („(repeat 1x)“): gehört nicht zum Hinweis
+      if (w.charAt(0) === '(' && w.charAt(w.length - 1) !== ')') { a++; w = w.slice(1); }
+      else if (w.charAt(w.length - 1) === ')' && w.charAt(0) !== '(') { b--; w = w.slice(0, -1); }
+      var vor = a > 0 ? t.charAt(a - 1) : ' ', nach = b < t.length ? t.charAt(b) : ' ';
+      if (ZEICHEN_WORT.test(vor) || ZEICHEN_WORT.test(nach)) continue;
+      if (a > pos) out.push({ t: t.slice(pos, a) });
+      out.push({ t: w, wdh: true });
+      pos = b;
+    }
+    if (pos < t.length) out.push({ t: t.slice(pos) });
+    return out;
+  }
+  function istWdh(t) { var x = wdhTeile(String(t).trim()); return x.length === 1 && !!x[0].wdh; }
+  function textHtml(t) {
+    return wdhTeile(t).map(function (x) { return x.wdh ? '<span class="wdh">' + esc(x.t) + '</span>' : esc(x.t); }).join('');
+  }
+  // Abschnitt „Strophe 2 (Gesang bissl später)“ → Name „Strophe 2“ und Notiz „Gesang bissl später“ (Nutzer: Notizen als Hinweis)
+  var AB_WORT = /^((?:kurzes |langes )?(?:intro|outro|vers|verse|strophe|refrain|chorus|pre-?chorus|post-?chorus|bridge|minibridge|solo|instrumental|interlude|zwischenspiel|break|hook|ende|schluss|coda|riff|tag)(?![a-zäöüß])(?:\s*\d+(?![\dxX×]))?(?:\s+(?:solo|outro|intro|instrumental|break|riff|time|part|teil)(?![a-zäöüß]))?(?:\s*\+\s*\S+)?)(.*)$/i;
+  function abschnittTeile(text) {
+    var t = String(text), name = t, notiz = '', k = t.indexOf('('), d = t.indexOf(':');
+    if (k > 0 && (d < 0 || k < d + 2)) { name = t.slice(0, k); notiz = t.slice(k); }
+    else if (d > 0) { name = t.slice(0, d); notiz = t.slice(d + 1); }
+    else {
+      var m = AB_WORT.exec(t);
+      if (m && m[2].trim() && !/^[\s!?.]+$/.test(m[2])) { name = m[1]; notiz = m[2]; }
+    }
+    name = name.replace(/[\s:–-]+$/, '').trim();
+    notiz = notiz.replace(/[()]/g, '').replace(/^[\s:–-]+/, '').replace(/[\s:]+$/, '').trim();
+    if (!name) return { name: t, notiz: '' };
+    return { name: name, notiz: notiz };
+  }
+
   // ------------------------------------------------------------------ Darstellung
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   // Akkord als HTML: jeder Akkord eines Klammerinhalts für sich antippbar
@@ -302,10 +345,32 @@ var SB_LIED = (function () {
         var leer = !s.tx.trim();
         return '<span class="s' + (s.ch !== null ? ' hat' : '') + (leer ? ' nur' : '') + '">' +
           '<span class="c">' + (s.ch !== null ? '<span class="ci">' + akkordHtml(s.ch, o) + '</span>' : '') + '</span>' +
-          '<span class="t">' + (s.tx ? esc(s.tx) : '') + '</span></span>';
+          '<span class="t">' + (s.tx ? textHtml(s.tx) : '') + '</span></span>';
       }).join('') + '</span>';
     }).join('') + '</div>';
   }
+  // Nur Akkorde: Liedtext fällt weg, Akkorde über dem Text werden zur Akkordzeile (eine je Textzeile, damit die
+  // Phrasen erhalten bleiben). Abschnitte, Hinweise, Akkordfolgen und Bilder bleiben.
+  function nurAkkorde(lied) {
+    var z = [];
+    lied.zeilen.forEach(function (x) {
+      if (x.art === 'text') {
+        var akk = x.teile.filter(function (p) { return p.ch !== null; });
+        var wdh = [];
+        x.teile.forEach(function (p) { wdhTeile(p.tx).forEach(function (w) { if (w.wdh) wdh.push({ ch: '*' + w.t, tx: ' ' }); }); });
+        if (akk.length) z.push({ art: 'akkorde', teile: akk.map(function (p) { return { ch: p.ch, tx: ' ' }; }).concat(wdh) });
+        return;
+      }
+      if (x.art === 'leer' && (!z.length || z[z.length - 1].art === 'leer')) return;
+      z.push(x);
+    });
+    while (z.length && z[z.length - 1].art === 'leer') z.pop();
+    var kopie = {};
+    Object.keys(lied).forEach(function (k) { kopie[k] = lied[k]; });
+    kopie.zeilen = z;
+    return kopie;
+  }
+
   // Akkordfolge in Gruppen, zwischen denen Abstand steht: „(“ hängt am nächsten Stück, „)“ und Satzzeichen am vorigen.
   // [C] [G] (Original [Eb] [Bb]) → C · G · (Original · E♭ · B♭)
   function folge(teile) {
@@ -329,8 +394,10 @@ var SB_LIED = (function () {
     lied.zeilen.forEach(function (z) {
       if (z.art === 'leer') { out.push('<div class="leerzeile"></div>'); return; }
       if (z.art === 'abschnitt') {
-        imRefrain = /^(chorus|refrain|ref\b|hook)/i.test(z.text);
-        out.push('<div class="abschnitt' + (imRefrain ? ' refrain' : '') + '">' + esc(z.text) + '</div>');
+        var ab = abschnittTeile(z.text);
+        imRefrain = /^(chorus|refrain|ref\b|hook)/i.test(ab.name);
+        out.push('<div class="abschnitt' + (imRefrain ? ' refrain' : '') + '"><span class="ab-name">' + esc(ab.name) + '</span>' +
+          (ab.notiz ? ' <span class="ab-notiz">' + esc(ab.notiz) + '</span>' : '') + '</div>');
         return;
       }
       if (z.art === 'notiz') { out.push('<div class="notiz">' + esc(z.text) + '</div>'); return; }
@@ -338,13 +405,13 @@ var SB_LIED = (function () {
       if (z.art === 'akkorde') {
         out.push('<div class="zeile folge">' + folge(z.teile).map(function (gruppe) {
           return '<span class="fg">' + gruppe.map(function (st) {
-            return st.ch !== undefined ? '<span class="fa">' + akkordHtml(st.ch, o) + '</span>' : '<span class="zw">' + esc(st.t) + '</span>';
+            return st.ch !== undefined ? '<span class="fa">' + akkordHtml(st.ch, o) + '</span>' : '<span class="' + (istWdh(st.t) ? 'wdh' : 'zw') + '">' + esc(st.t) + '</span>';
           }).join('') + '</span>';
         }).join('') + '</div>');
         return;
       }
       if (z.teile.some(function (p) { return p.ch !== null; })) out.push(zeileHtml(z, o));
-      else out.push('<div class="zeile">' + esc(z.teile.map(function (p) { return p.tx; }).join('')) + '</div>');
+      else out.push('<div class="zeile">' + textHtml(z.teile.map(function (p) { return p.tx; }).join('')) + '</div>');
     });
     return out.join('');
   }
@@ -422,6 +489,6 @@ var SB_LIED = (function () {
   return {
     einAkkord: einAkkord, token: token, istAkkord: istAkkord, akkordName: akkordName, tokenName: tokenName, griffName: griffName,
     lies: lies, titelVon: titelVon, akkorde: akkorde, tonart: tonart, namenOpt: namenOpt, vorzeichenArt: vorzeichenArt,
-    html: html, esc: esc, teile: teile, folge: folge, transponiereText: transponiereText, ueberText: ueberText, istAkkordzeile: istAkkordzeile, suchtext: suchtext,
+    html: html, esc: esc, teile: teile, folge: folge, nurAkkorde: nurAkkorde, wdhTeile: wdhTeile, istWdh: istWdh, abschnittTeile: abschnittTeile, transponiereText: transponiereText, ueberText: ueberText, istAkkordzeile: istAkkordzeile, suchtext: suchtext,
   };
 })();

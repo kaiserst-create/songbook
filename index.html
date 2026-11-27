@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Songbook</title>
-<meta name="description" content="Songbook mit Akkorden, Griffbildern für Gitarre und Ukulele, Transponieren, Setlisten und PDF. Läuft offline.">
+<meta name="description" content="Songbook mit Akkorden, nur Akkorde oder mit Text, Griffbildern für Gitarre und Ukulele, Transponieren auch für B♭- und E♭-Instrumente, Setlisten und PDF. Läuft offline.">
 <meta name="theme-color" content="#f5f3ee" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#14161b" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -35,6 +35,7 @@
     </div>
   </div>
   <div class="kopf-knoepfe">
+    <button type="button" class="icon-knopf ti-knopf" aria-haspopup="menu" aria-expanded="false" title="Alle Songs für C-, B♭- oder E♭-Instrumente">C</button>
     <button type="button" id="thema" class="icon-knopf" aria-label="Hell oder dunkel umschalten" title="Hell oder dunkel">
       <svg class="sonne" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg>
       <svg class="mond" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
@@ -83,6 +84,7 @@
   <div class="leiste" id="song-leiste">
     <button type="button" class="zurueck" id="song-zurueck"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span id="song-zurueck-text">Songs</span></button>
     <div class="leiste-knoepfe">
+      <button type="button" class="icon-knopf ti-knopf" aria-haspopup="menu" aria-expanded="false" title="Alle Songs für C-, B♭- oder E♭-Instrumente">C</button>
       <button type="button" class="icon-knopf" id="song-bearbeiten" aria-label="Song bearbeiten" title="Bearbeiten">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM13.5 7.5l3 3"/></svg>
       </button>
@@ -109,6 +111,7 @@
       <button type="button" class="wz-wert" id="tr-wert" aria-label="Transponierung zurücksetzen">±0</button>
       <button type="button" class="icon-knopf klein" id="tr-plus" aria-label="Einen Halbton höher">+</button>
     </div>
+    <button type="button" class="chip text-chip" id="text-knopf" aria-pressed="false" title="Liedtext ausblenden, nur Akkorde, Abschnitte und Hinweise zeigen">Nur Akkorde</button>
     <div class="segment klein" id="inst" role="radiogroup" aria-label="Griffbilder">
       <button type="button" role="radio" data-inst="aus">Ohne Griffe</button>
       <button type="button" role="radio" data-inst="gitarre">Gitarre</button>
@@ -151,6 +154,7 @@
   <div class="leiste">
     <button type="button" class="zurueck" id="setliste-zurueck"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>Setlisten</span></button>
     <div class="leiste-knoepfe">
+      <button type="button" class="icon-knopf ti-knopf" aria-haspopup="menu" aria-expanded="false" title="Alle Songs für C-, B♭- oder E♭-Instrumente">C</button>
       <button type="button" class="icon-knopf" id="setliste-teilen" aria-label="Setliste als PDF teilen oder sichern" title="Als PDF teilen oder sichern">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.5V3.5M8 7.2l4-3.7 4 3.7M8.5 10H6.2C5.5 10 5 10.5 5 11.2v8.6c0 .7.5 1.2 1.2 1.2h11.6c.7 0 1.2-.5 1.2-1.2v-8.6c0-.7-.5-1.2-1.2-1.2h-2.3"/></svg>
       </button>
@@ -186,6 +190,7 @@
   <div class="leiste">
     <button type="button" class="zurueck" id="editor-abbrechen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>Abbrechen</span></button>
     <div class="leiste-knoepfe">
+      <button type="button" class="icon-knopf ti-knopf" aria-haspopup="menu" aria-expanded="false" title="Alle Songs für C-, B♭- oder E♭-Instrumente">C</button>
       <button type="button" class="knopf" id="editor-speichern">Als neue Version speichern</button>
     </div>
   </div>
@@ -208,10 +213,10 @@
     </div>
   </div>
   <div class="editor-flaeche">
-    <label class="feld grow"><span>Text mit Akkorden</span>
+    <label class="feld grow"><span>Text mit Akkorden (klingend, in C)</span>
       <textarea id="ed-text" spellcheck="false" autocapitalize="off" autocomplete="off" rows="18"></textarea>
     </label>
-    <div class="feld grow vorschau-feld"><span>Vorschau</span><div class="lied vorschau karte" id="ed-vorschau"></div></div>
+    <div class="feld grow vorschau-feld"><span id="ed-vorschau-titel">Vorschau</span><div class="lied vorschau karte" id="ed-vorschau"></div></div>
   </div>
   <details class="hilfe">
     <summary>So schreibst du Songs</summary>
@@ -231,9 +236,18 @@
 <main id="v-einstellungen" class="ansicht seite" aria-label="Einstellungen" hidden>
   <div class="leiste">
     <button type="button" class="zurueck" id="einstellungen-zurueck"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>Zurück</span></button>
+    <div class="leiste-knoepfe"><button type="button" class="icon-knopf ti-knopf" aria-haspopup="menu" aria-expanded="false" title="Alle Songs für C-, B♭- oder E♭-Instrumente">C</button></div>
   </div>
   <h2 class="editor-titel">Einstellungen</h2>
   <div class="karte einstellungen">
+    <div class="e-zeile">
+      <div><b>Instrument</b><p class="leise klein-text">Alle Songs für dein Instrument transponiert. B♭: Trompete, Tenorsax, Klarinette (2 Halbtöne höher). E♭: Altsax, Baritonsax (9 Halbtöne höher). Oben in jeder Ansicht umschaltbar.</p></div>
+      <div class="segment klein" id="e-ti" role="radiogroup" aria-label="Instrument">
+        <button type="button" role="radio" data-ti="c">C</button>
+        <button type="button" role="radio" data-ti="b">B♭</button>
+        <button type="button" role="radio" data-ti="es">E♭</button>
+      </div>
+    </div>
     <div class="e-zeile">
       <div><b>Akkordnamen</b><p class="leise klein-text">Deutsch mit H und B♭ oder international mit B und B♭.</p></div>
       <div class="segment klein" id="e-namen" role="radiogroup" aria-label="Akkordnamen">
@@ -264,6 +278,14 @@
   <p id="offline-status" class="leise"></p>
   <p id="install-zeile" hidden><button type="button" class="link-knopf" id="install-oeffnen">Songbook als App installieren</button></p>
 </footer>
+
+<!-- ===================================================== Zentraler Umschalter C, B♭, E♭ -->
+<div class="menue karte ti-menue" id="ti-menue" role="menu" aria-label="Alle Songs transponieren für" hidden>
+  <p class="ti-titel">Alle Songs anzeigen für</p>
+  <button type="button" role="menuitemradio" data-ti="c"><b>C</b><span>klingend: Gesang, Gitarre, Bass, Klavier, Tuba</span></button>
+  <button type="button" role="menuitemradio" data-ti="b"><b>B♭</b><span>Trompete, Tenorsax, Klarinette</span></button>
+  <button type="button" role="menuitemradio" data-ti="es"><b>E♭</b><span>Altsax, Baritonsax</span></button>
+</div>
 
 <!-- ===================================================== Griff zum Antippen -->
 <div class="griff-pop karte" id="griff-pop" role="dialog" aria-label="Griff" hidden>

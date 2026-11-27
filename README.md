@@ -7,9 +7,12 @@ Dein Songbook als Web-App: alle Songs aus dem Ordner `05_MUSIC/Songbooks` mit Ak
 - **Songs:** 89 Songs alphabetisch, mit Buchstabenleiste zum Springen. Die Suche findet Titel, Interpret und Textzeilen.
 - **Akkorde über dem Text:** Jeder Akkord steht über seiner Silbe, auch wenn die Zeile auf dem Handy umbricht. Akkordfolgen ohne Text stehen als eigene Zeile. Abschnitte (Strophe, Refrain …) sind abgesetzt, der Refrain farbig.
 - **Transponieren:** Mit − und + in Halbtönen nach oben oder unten, alle Akkorde und Griffbilder passen sich an. Die Schreibweise folgt der neuen Tonart (B♭ statt A#, F# statt G♭). Ein Tipp auf den Wert setzt zurück. Die App merkt sich die Transponierung je Song. Über „Mehr“ lässt sie sich als neue Version speichern.
+- **Nur Akkorde:** Der Knopf „Nur Akkorde“ blendet den Liedtext aus. Es bleiben die Akkorde (je Textzeile eine Akkordzeile), Abschnitte und Hinweise. Gilt für alle Songs und fürs PDF.
+- **C, B♭, E♭ für alle Songs:** Oben in jeder Ansicht sitzt ein Knopf mit „C“. Er schaltet alle Songs für B♭-Instrumente (Trompete, Tenorsax, Klarinette: 2 Halbtöne höher) oder E♭-Instrumente (Altsax, Baritonsax: 9 Halbtöne höher) um, samt Griffbildern und PDF. Das kommt zur Transponierung des einzelnen Songs dazu.
+- **Hinweise:** Wiederholungen wie „2x“, „(x4)“ oder „3x“ stehen kursiv und grau. Bei „Chorus 2x“ steht „CHORUS“ blau und „2x“ als Hinweis dahinter.
 - **Griffbilder:** Oben „Gitarre“ oder „Ukulele“ zeigt alle Akkorde des Songs als Griffbild. Ein Tipp auf einen Akkord im Text oder ein Griffbild öffnet den Griff mit weiteren Varianten (‹ ›) und „Anhören“.
 - **Schrift und Scrollen:** Schriftgröße mit A− und A+, automatisches Scrollen in zehn Tempi. Solange ein Song offen ist, bleibt der Bildschirm an (abschaltbar).
-- **Setlisten:** Übernommen aus deinen Dokumenten: Amadeus in Concert 2024, Slibovitz Rock im Tennis 2024 und 2025, Punschstand 2024. Dazu „Eigene Songs“ mit HOCHPROZENTIG KONZENTRIERT!, Urlaub, Endlose Nacht, Hand in Hand, Kän Riesling und Fer Bier 500 Meile. Eigene Setlisten anlegen, Songs hinzufügen, sortieren, Trenner wie „Pause“ oder „Zugaben“ einfügen, umbenennen, kopieren. Im Song blätterst du mit ‹ › unten, durch Wischen oder mit den Pfeiltasten (auch Bluetooth-Pedale).
+- **Setlisten:** Übernommen aus deinen Dokumenten: Amadeus in Concert 2024, Slibovitz Rock im Tennis 2024 und 2025, Punschstand 2024. Dazu „Eigene Songs“ mit HOCHPROZENTIG KONZENTRIERT!, Urlaub, Endlose Nacht, Hand in Hand, Kän Riesling und Fer Bier 500 Meile. Eigene Setlisten anlegen, Songs hinzufügen, sortieren, Trenner wie „Pause“ oder „Zugaben“ einfügen, umbenennen, kopieren. Im Ändern-Modus trägst du Spielzeiten in Minuten ein: Die Setliste zeigt sie je Song, die Summe jedes Sets am Trenner („davor 30,5 Min.“) und die Gesamtdauer, auch im PDF-Inhaltsverzeichnis. Im Song blätterst du mit ‹ › unten, durch Wischen oder mit den Pfeiltasten (auch Bluetooth-Pedale).
 - **Bearbeiten und neue Songs:** Jedes Speichern legt eine neue Version an, das Original aus dem Songbook bleibt erhalten. Unter „Mehr“ und „Versionen“ wählst du, welche Version gilt, oder löschst alte. Neue Songs legst du mit „Neuer Song“ an. Text aus dem Netz mit Akkorden in eigenen Zeilen wandelt „Akkorde über Text umwandeln“ um.
 - **PDF:** Das Teilen-Symbol erzeugt ein PDF des Songs (in der gewählten Tonart, mit Griffbildern, wenn sie eingeschaltet sind) und öffnet auf iPhone und iPad das Teilen-Menü: Nachricht, Mail, in Dateien sichern. Am Computer wird es heruntergeladen. In einer Setliste entsteht ein PDF mit allen Songs und Inhaltsverzeichnis.
 - **Weiter, wo du warst:** Beim nächsten Öffnen oder nach einem Neustart steht die App genau dort, wo du aufgehört hast: gleicher Song oder gleiche Setliste, gleiche Stelle im Text, gleiche Suche. Warst du mitten im Bearbeiten, ist auch der ungespeicherte Text wieder da.
@@ -42,12 +45,12 @@ In den Word-Dateien steht „B“ für H (G/B, B7 im E-Blues), „Bb“ für B�
 ruby -run -e httpd . -p 8768
 ```
 
-Dann `http://localhost:8768` öffnen. Per Doppelklick auf `index.html` läuft die App auch, nur ohne Offline-Speicher.
+Im Hauptordner starten (nicht in `web/`, sonst findet der Browsertest die Skripte nicht), dann `http://localhost:8768/web/` öffnen. Per Doppelklick auf `web/index.html` läuft die App auch, nur ohne Offline-Speicher.
 
 Gesamttest im Browser (bedient alle Funktionen und stellt deine Daten danach wieder her): in der Entwicklerkonsole der laufenden App
 
 ```js
-(0, eval)(await (await fetch('skripte/browsertest.js?' + Date.now())).text()); await SB_TEST()
+(0, eval)(await (await fetch('../skripte/browsertest.js?' + Date.now())).text()); await SB_TEST()
 ```
 
 ## Prüfen
@@ -56,7 +59,7 @@ Gesamttest im Browser (bedient alle Funktionen und stellt deine Daten danach wie
 osascript -l JavaScript skripte/pruefen.js
 ```
 
-Prüft über 2200 Dinge: jeden Akkord aller Songs (erkannt, Griff für Gitarre und Ukulele vorhanden, kein falscher Ton im Griff), Transponieren in allen zwölf Stufen, Schreibweisen (B = H, Bb = B♭, Basslauf /A, Ketten wie C-Csus4-C), das Umwandeln von Akkorden über dem Text, ein PDF für jeden Song und für eine Setliste (Aufbau der Datei), Setlisten, Offline-Liste, IDs, Speicherschlüssel, Gedankenstriche in den Texten, Icons, den Hinweis zum Installieren auf 18 Geräten, die Regeln gegen Hintergrundaktivität, den Offline-Speicher und den Neustart an der letzten Stelle. Muss mit 0 Fehlern enden. Mit einem Ordner als Argument schreibt es zwei Test-PDFs dorthin.
+Prüft über 3200 Dinge: jeden Akkord aller Songs (erkannt, Griff für Gitarre und Ukulele vorhanden, kein falscher Ton im Griff), Transponieren in allen zwölf Stufen, Schreibweisen (B = H, Bb = B♭, Basslauf /A, Ketten wie C-Csus4-C), das Umwandeln von Akkorden über dem Text, ein PDF für jeden Song und für eine Setliste (Aufbau der Datei), Setlisten, Offline-Liste, IDs, Speicherschlüssel, Gedankenstriche in den Texten, Icons, den Hinweis zum Installieren auf 18 Geräten, die Regeln gegen Hintergrundaktivität, den Offline-Speicher, den Neustart an der letzten Stelle dass `web/` nur die Dateien zum Hochladen enthält und die Funktionen aus Biene Meier (Nur Akkorde bei jedem Song ohne Akkordverlust, Hinweise, Abstände für B♭ und E♭). Muss mit 0 Fehlern enden. Mit einem Ordner als Argument schreibt es zwei Test-PDFs dorthin.
 
 ## Songs ändern im Projekt
 
@@ -66,26 +69,27 @@ Die Songs liegen als Textdateien in `songs/`, die Setlisten in `setlisten.json`.
 python3 skripte/songs_bauen.py
 ```
 
-und in `sw.js` die `VERSION` erhöhen. Das Format steht oben in `lieder.js` und in der App unter „So schreibst du Songs“. Der erste Import aus Word lief mit `skripte/word_einlesen.py` und `skripte/songs_anlegen.py`; die beiden nur erneut ausführen, wenn du von vorn aus den Word-Dateien anfangen willst (überschreibt `songs/`).
+und in `web/sw.js` die `VERSION` erhöhen. Das Format steht oben in `web/lieder.js` und in der App unter „So schreibst du Songs“. Der erste Import aus Word lief mit `skripte/word_einlesen.py` und `skripte/songs_anlegen.py`; die beiden nur erneut ausführen, wenn du von vorn aus den Word-Dateien anfangen willst (überschreibt `songs/`).
 
 ## Aufbau
 
 ```
-index.html, style.css      Oberfläche
-app.js                     Zustand, eigene Daten, Navigation, alle Ansichten
-lieder.js                  Songformat lesen, Akkorde, Transponieren, Darstellung
-pdf.js                     PDF ohne Bibliothek (Helvetica, gezeichnetes ♭, Griffbilder)
-musik.js, griffe.js        Griffe, Griffbilder und Klang aus „Songwriting & Chords“
-songs.js                   alle Songs und Setlisten (erzeugt aus songs/ und setlisten.json)
-installieren.js            Hinweis zum Installieren wie im Tuner
-sw.js, manifest.webmanifest  Offline-Modus und Installation
-icons/                     App-Icons (skripte/icons_erzeugen.js)
-songs/, setlisten.json     Quelle der Songs und Setlisten
-skripte/                   Import aus Word, Bauen, Prüfen, Icons
+web/                         die App, genau die Dateien für GitHub
+  index.html, style.css      Oberfläche
+  app.js                     Zustand, eigene Daten, Navigation, alle Ansichten
+  lieder.js                  Songformat lesen, Akkorde, Transponieren, Darstellung
+  pdf.js                     PDF ohne Bibliothek (Helvetica, gezeichnetes ♭, Griffbilder)
+  musik.js, griffe.js        Griffe, Griffbilder und Klang aus „Songwriting & Chords“
+  songs.js                   alle Songs und Setlisten (erzeugt aus songs/ und setlisten.json)
+  installieren.js            Hinweis zum Installieren wie im Tuner
+  sw.js, manifest.webmanifest  Offline-Modus und Installation
+  icons/                     App-Icons (skripte/icons_erzeugen.js)
+songs/, setlisten.json       Quelle der Songs und Setlisten
+skripte/                     Import aus Word, Bauen, Prüfen, Icons, Browsertest
 ```
 
 ## Auf iPhone und iPad installieren (über GitHub Pages)
 
-Wie beim Tuner: Repository anlegen (Public), diese Dateien hochladen: `index.html`, `style.css`, `app.js`, `lieder.js`, `pdf.js`, `musik.js`, `griffe.js`, `songs.js`, `installieren.js`, `sw.js`, `manifest.webmanifest` und den Ordner `icons`. Unter Settings → Pages „Deploy from a branch“, `main`, `/ (root)`. Dann die Adresse in Safari öffnen, Teilen, „Zum Home-Bildschirm“. Achtung: Die Liedtexte stehen dann öffentlich im Netz. Wer das nicht will, nimmt ein privates Repository mit einem anderen Hoster oder öffnet die App nur lokal.
+Wie beim Tuner: Repository anlegen (Public) und **den Inhalt von `web/`** hochladen, also alles, was in diesem Ordner liegt (11 Dateien und den Ordner `icons`), direkt in die oberste Ebene des Repositorys, nicht den Ordner `web` selbst. Am einfachsten: `web/` im Finder öffnen, alles markieren (⌘A) und auf „Add file → Upload files“ ziehen. Unter Settings → Pages „Deploy from a branch“, `main`, `/ (root)`. Dann die Adresse in Safari öffnen, Teilen, „Zum Home-Bildschirm“. Achtung: Die Liedtexte stehen dann öffentlich im Netz. Wer das nicht will, nimmt ein privates Repository mit einem anderen Hoster oder öffnet die App nur lokal.
 
-Updates: geänderte Dateien hochladen und in `sw.js` die `VERSION` erhöhen.
+Updates: geänderte Dateien aus `web/` hochladen, immer mit `sw.js` und erhöhter `VERSION`. Auf GitHub ändert sich durch den Ordner `web/` nichts: Dort liegen die Dateien weiter oben im Repository.

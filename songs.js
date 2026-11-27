@@ -1,6 +1,6 @@
 // Erzeugt mit: python3 skripte/songs_bauen.py (Quelle: songs/*.txt und setlisten.json). Nicht von Hand bearbeiten.
 var SB_DATEN = {
-"stand": "2026-11-26",
+"stand": "2026-11-27",
 "songs": [
 {
 "id": "alkohol",

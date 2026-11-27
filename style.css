@@ -253,7 +253,8 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 /* Der Akkord steht über der Silbe und darf nach rechts überstehen. Würde er den nächsten Akkord berühren,
    schiebt app.js (akkordAbstand) die Silben auseinander. */
 .lied .s .c { min-height: 1.3em; line-height: 1.3; font-size: .86em; white-space: nowrap; width: 0; overflow: visible; }
-.lied .s .t { white-space: pre; min-height: 1.45em; }
+.lied .s .t { white-space: pre-wrap; overflow-wrap: anywhere; min-height: 1.45em; }
+.lied .w, .lied .s { min-width: 0; max-width: 100%; }   /* überlange Wörter (Links) brechen um statt über den Rand zu ragen */
 .lied .ak { color: var(--akkord); font-weight: 750; cursor: pointer; border-radius: 4px; }
 .lied .ak:hover { background: var(--warm-weich); }
 .lied .zw { color: var(--leise); font-weight: 600; font-size: .9em; }
@@ -285,10 +286,13 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 
 /* Griff-Popup */
 .griff-pop {
-  position: fixed; z-index: 50; width: 196px; padding: 10px 12px 12px; display: grid; gap: 8px; justify-items: center;
+  /* so breit wie der Inhalt (‹ Anhören ›), nie breiter als das Fenster: sonst ragen × und › hinaus */
+  position: fixed; z-index: 50; width: max-content; min-width: 200px; max-width: calc(100vw - 16px); padding: 10px 12px 12px;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; justify-items: center;
   box-shadow: 0 2px 6px rgba(20, 20, 30, .1), 0 12px 32px rgba(20, 20, 30, .2);
 }
-.gp-kopf { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+.gp-kopf { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; }
+.gp-kopf .ih-zu { margin: 0; }
 .gp-kopf b { font-size: 1.15rem; color: var(--akkord); }
 .gp-bild { width: 120px; }
 .gp-art { font-size: .78rem; margin: -4px 0 0; text-align: center; min-height: 1.1em; }
@@ -429,3 +433,29 @@ html.ih-offen body { padding-bottom: calc(var(--ih-hoehe, 0px) + env(safe-area-i
   .lied .ak:hover { background: none; }
   .lied .zeile.mit, .lied .zeile { break-inside: avoid; }
 }
+
+/* ------------------------------------------------ Zentraler Umschalter C, B♭, E♭ und „Nur Akkorde“ (wie Biene Meier) */
+.ti-knopf { width: auto; min-width: 44px; padding: 0 10px; font-weight: 800; font-size: .95rem; letter-spacing: -.01em; }
+.ti-knopf.an { background: var(--akzent); border-color: var(--akzent); color: var(--akzent-text); }
+.ti-menue { position: fixed; z-index: 45; min-width: 260px; }
+.ti-menue .ti-titel { margin: 4px 12px 6px; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--leise); }
+.ti-menue button { display: grid; grid-template-columns: 38px 1fr; align-items: baseline; gap: 6px; }
+.ti-menue button b { font-size: 1.05rem; }
+.ti-menue button span { font-size: .85rem; color: var(--leise); }
+.ti-menue button[aria-checked="true"] { background: var(--akzent-weich); }
+.ti-menue button[aria-checked="true"] b { color: var(--akzent); }
+.lied-info .ti-info { color: var(--akzent); font-weight: 650; }
+.text-chip { min-height: 34px; }
+.lied.nur-akkorde .zeile.folge { margin: .2em 0; }
+.setliste .e-dauer { font-size: .82rem; color: var(--leise); font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; }
+.setliste .trenner .e-dauer { font-size: .75rem; }
+.e-dauer-feld { width: 4.2em; min-height: 32px !important; padding: 4px 8px !important; text-align: right; flex: none; }
+@media (max-width: 560px) {
+  .ti-knopf { min-width: 40px; padding: 0 8px; }
+  .leiste-knoepfe { gap: 6px; }
+}
+
+/* Hinweise: Notiz am Abschnittsnamen und Wiederholungen wie „2x“ */
+.lied .abschnitt .ab-notiz { text-transform: none; letter-spacing: 0; font-style: italic; font-weight: 600; color: var(--leise); font-size: 1.12em; margin-left: .3em; }
+.lied .wdh { font-style: italic; font-weight: 600; color: var(--leise); }
+.lied .zeile.folge .wdh { font-size: .9em; }
